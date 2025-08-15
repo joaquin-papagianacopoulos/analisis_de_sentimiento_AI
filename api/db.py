@@ -1,20 +1,51 @@
-import os
-from contextlib import contextmanager
+# app/db.py
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
+from dotenv import load_dotenv
 
-_engine: Engine | None = None
+load_dotenv()
 
-def get_engine() -> Engine:
-    global _engine
-    if _engine is None:
-        url = os.getenv("DB_URL")
-        if not url:
-            raise RuntimeError("DB_URL no está definido (.env)")
-        _engine = create_engine(url, pool_pre_ping=True, future=True)
-    return _engine
+# Configuración de base de datos
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "3306")
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "12345678")
+DB_NAME = os.getenv("DB_NAME", "noti")
 
-@contextmanager
-def db_conn():
-    with get_engine().connect() as conn:
-        yield conn
+# URL de conexión para MySQL
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+
+# Crear engine
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,  # Cambiar a True para ver queries SQL
+    pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=10,
+    max_overflow=20
+)
+
+# Crear SessionLocal
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Base para modelos
+Base = declarative_base()
+
+def get_database():
+    """
+    Dependency para obtener sesión de base de datos
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def init_database():
+    """
+    Inicializa la base de datos creando las tablas
+    """
+    from . import models
+    models.Base.metadata.create_all(bind=engine)
