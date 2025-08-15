@@ -136,7 +136,6 @@ streamlit run app.py
 ### Acceder a la aplicación
 - **Frontend**: http://localhost:8501
 - **API Docs**: http://localhost:8000/docs
-- **API Redoc**: http://localhost:8000/redoc
 
 ## 💡 Cómo funciona
 
